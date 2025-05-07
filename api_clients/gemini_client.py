@@ -86,10 +86,9 @@ class GeminiClient(BaseAPIClient):
             if processed_messages and processed_messages[0]["role"] == "system":
                 system_instruction_content = processed_messages.pop(0)["content"]
 
-            temp_model_kwargs = {}
             if system_instruction_content:
                 if processed_messages and processed_messages[0]["role"] == "user":
-                     processed_messages[0]["content"] = f"{system_instruction_content}\n\n{processed_messages[0]["content"]}"
+                    processed_messages[0]["content"] = system_instruction_content + "\n\n" + processed_messages[0]["content"]
                 elif not processed_messages:
                     processed_messages.append({"role": "user", "content": system_instruction_content})
                 else:
