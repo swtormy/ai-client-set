@@ -1,0 +1,56 @@
+version: '3.8'
+
+services:
+  ollama:
+    image: ollama/ollama:latest
+    container_name: ollama_service
+    entrypoint: >
+      /bin/sh -c "
+        /bin/ollama serve &
+        echo 'Ollama server started in background. Waiting 10s for it to initialize...' &&
+        sleep 10 && 
+        echo 'Pulling qwen2:7b model...' &&
+        /bin/ollama pull qwen2:7b && 
+        echo 'Model qwen2:7b pulled. Ollama is ready.' &&
+        wait $! || wait $! # Ждем завершения фонового процесса ollama serve
+      "
+    volumes:
+      - ollama_data:/root/.ollama
+    ports:
+      - "11434:11434"
+    # Для использования GPU (NVIDIA):
+    # deploy:
+    #   resources:
+    #     reservations:
+    #       devices:
+    #         - driver: nvidia
+    #           count: all 
+    #           capabilities: [gpu]
+    healthcheck:
+      test: ["CMD-SHELL", "ollama list || exit 1"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 30s
+    restart: unless-stopped
+
+  api_server:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: api_server_service
+    depends_on:
+      ollama:
+        condition: service_healthy 
+    ports:
+      - "8000:8000"
+    volumes:
+      - .:/app
+      
+    env_file:
+      - .env 
+      
+    restart: unless-stopped
+
+volumes:
+  ollama_data: 
